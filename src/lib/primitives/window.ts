@@ -1,9 +1,12 @@
-import type { CanvasWindowState, Color } from '../types';
+import type { Color, Shape } from '../types';
+import { assert } from '../utils';
+import type { InputManager } from './input';
+import { Renderer } from './renderer';
 
+// TODO(fcasibu): canvas resizing
 export class CanvasWindow {
-  private state: CanvasWindowState = {
+  private state = {
     isRunning: false,
-    isDrawing: false,
     frameTime: 0.0,
     lastUpdate: 0,
     fps: 30,
@@ -11,22 +14,28 @@ export class CanvasWindow {
     height: 0,
   };
 
-  private frameBuffer: HTMLCanvasElement;
-  private backContext: CanvasRenderingContext2D;
-  private frontContext: CanvasRenderingContext2D | null = null;
+  private context: CanvasRenderingContext2D | null = null;
+  private renderer: Renderer | null = null;
 
-  constructor() {
-    this.frameBuffer = document.createElement('canvas');
-    this.backContext = this.frameBuffer.getContext('2d')!;
-  }
+  constructor(private readonly inputManager: InputManager) {}
 
   public initWindow(canvas: HTMLCanvasElement) {
+    if (this.context) {
+      return;
+    }
+
     this.state.width = canvas.width;
     this.state.height = canvas.height;
-    this.frontContext = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
+    assert(ctx, 'Failed to get 2D rendering context');
 
-    this.frameBuffer.width = canvas.width;
-    this.frameBuffer.height = canvas.height;
+    this.context = ctx;
+    this.renderer = new Renderer(
+      this.context,
+      this.state.width,
+      this.state.height,
+    );
+    this.inputManager.registerListeners(canvas);
   }
 
   public getWindowWidth() {
@@ -37,67 +46,70 @@ export class CanvasWindow {
     return this.state.height;
   }
 
-  public beginDrawing() {
-    this.state.isDrawing = true;
-    this.backContext.clearRect(0, 0, this.state.width, this.state.height);
-    this.backContext.beginPath();
-  }
-
-  public endDrawing() {
-    if (!this.frontContext) {
-      throw new Error('Window was not initialized with initWindow');
-    }
-
-    if (!this.state.isDrawing) {
-      throw new Error('Need to run beginDrawing first');
-    }
-
-    this.frontContext.drawImage(this.frameBuffer, 0, 0);
-    this.state.isDrawing = false;
-    this.backContext.closePath();
-  }
-
   public clearBackground(color: Color) {
-    this.backContext.clearRect(0, 0, this.state.width, this.state.height);
-    this.backContext.fillStyle = color;
-    this.backContext.fillRect(0, 0, this.state.width, this.state.height);
+    assert(
+      this.renderer,
+      'CanvasWindow renderer is not initialized. Call initWindow first.',
+    );
+    this.renderer.clearBackground(color);
   }
 
-  public drawRectangle(
+  public drawShape(shape: Shape) {
+    assert(
+      this.renderer,
+      'CanvasWindow renderer is not initialized. Call initWindow first.',
+    );
+    this.renderer.drawShape(shape);
+  }
+
+  public drawText(
+    text: string,
     x: number,
     y: number,
-    width: number,
-    height: number,
+    fontSize: number,
     color: Color,
   ) {
-    this.backContext.fillStyle = color;
-    this.backContext.fillRect(x, y, width, height);
+    assert(
+      this.renderer,
+      'CanvasWindow renderer is not initialized. Call initWindow first.',
+    );
+    this.renderer.drawText(text, x, y, fontSize, color);
   }
 
-  public drawCircle(centerX: number, centerY: number, r: number, color: Color) {
-    this.backContext.fillStyle = color;
-    this.backContext.arc(centerX, centerY, r, 0, 2 * Math.PI);
-    this.backContext.fill();
+  public measureText(text: string, fontSize: number) {
+    assert(
+      this.renderer,
+      'CanvasWindow renderer is not initialized. Call initWindow first.',
+    );
+    return this.renderer.measureText(text, fontSize);
   }
 
   public setFps(fps: number) {
+    assert(fps > 0, 'FPS must be greater than 0');
     this.state.fps = fps;
   }
 
-  public run(callback: (dt: number) => void) {
+  public run(callback: (timeStep: number) => void) {
     this.state.isRunning = true;
+    this.state.lastUpdate = performance.now();
+    const targetFrameTime = 1000 / this.state.fps;
+    const maxUpdates = 5;
+
+    assert(targetFrameTime > 0, 'Target frame time must be positive');
 
     const loop = (timestamp: number) => {
       if (!this.state.isRunning) return;
 
-      const dt = timestamp - (this.state.lastUpdate || timestamp);
-      const targetFrameTime = 1000 / this.state.fps;
+      const dt = timestamp - this.state.lastUpdate;
       this.state.frameTime += dt;
       this.state.lastUpdate = timestamp;
 
-      while (this.state.frameTime >= targetFrameTime) {
-        callback(this.state.frameTime);
+      let updates = 0;
+
+      while (this.state.frameTime >= targetFrameTime && updates < maxUpdates) {
+        callback(targetFrameTime);
         this.state.frameTime -= targetFrameTime;
+        updates += 1;
       }
 
       requestAnimationFrame(loop);
@@ -106,7 +118,10 @@ export class CanvasWindow {
     requestAnimationFrame(loop);
   }
 
-  public close() {
+  public closeWindow() {
     this.state.isRunning = false;
+    this.inputManager.unregisterListeners();
+    this.renderer = null;
+    this.context = null;
   }
 }
