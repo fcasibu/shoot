@@ -1,118 +1,28 @@
-import { createRectangle } from '../lib/primitives/shape';
 import type { SoundManager } from '../lib/primitives/sound';
-import {
-  vector2Add,
-  vector2Normalize,
-  vector2Scale,
-  vector2Sub,
-} from '../lib/primitives/vector2';
 import type { CanvasWindow } from '../lib/primitives/window';
 import type { Rectangle, Vec2 } from '../lib/types';
-import type { Player } from './player';
-import type { Renderable, Component } from './types';
+import { AnimationSprite, GhostEffect, Transform } from './common';
+import { type Entity, type AnimationSpriteConfig, EnemyType } from './types';
 
-class Transform {
-  public direction = 1;
-
-  constructor(
-    public position: Vec2,
-    private readonly size: { width: number; height: number },
-  ) {}
-
-  public move(playerPosition: Vec2, speed: number, dt: number) {
-    const dist = vector2Sub(playerPosition, this.position);
-    const dir = vector2Normalize(dist);
-
-    this.position = vector2Add(this.position, vector2Scale(dir, speed * dt));
-
-    this.direction = dir.x < 0 ? 1 : -1;
-  }
-
-  public takeDamage() {
-    this.position =
-      this.direction > 0
-        ? vector2Add(this.position, {
-            x: this.size.width,
-            y: 0,
-          })
-        : vector2Sub(this.position, {
-            x: this.size.width,
-            y: 0,
-          });
-  }
-
-  public getCollisionRect(): Rectangle {
-    return createRectangle(
-      this.position.x,
-      this.position.y,
-      this.size.width,
-      this.size.height,
-      '',
-    );
-  }
-}
-
-interface AnimationSpriteConfig {
-  frameCount: number;
-  frameWidth: number;
-  frameHeight: number;
-}
-
-class AnimationSprite implements Component, Renderable {
-  private currentFrame = 0;
-  private frameTime = 0;
-  private readonly animationFPS = 10;
-  private readonly frameDuration = 1 / this.animationFPS;
+export class Enemy implements Entity {
+  private transform: Transform;
+  private animationSprite: AnimationSprite;
+  private movementSpeed = 50;
+  private isActiveEnemy = true;
+  private health = 100;
+  private ghosts: GhostEffect[] = [];
+  private hitCooldown = 0;
 
   constructor(
     private readonly canvasWindow: CanvasWindow,
-    private readonly texture: ImageBitmap,
-    private readonly config: AnimationSpriteConfig,
-  ) {}
-
-  public update(dt: number) {
-    this.frameTime += dt;
-
-    if (this.frameTime >= this.frameDuration) {
-      this.currentFrame =
-        (this.currentFrame + 1) % (this.config.frameCount / 2);
-      this.frameTime = 0;
-    }
-  }
-
-  public draw(position: Vec2, direction: number) {
-    const source = createRectangle(
-      this.config.frameWidth * this.currentFrame,
-      0,
-      this.config.frameWidth,
-      this.config.frameHeight,
-      '',
-    );
-
-    const shouldFlip = direction === -1;
-
-    this.canvasWindow.drawTextureRegion(
-      this.texture,
-      source,
-      position,
-      shouldFlip,
-      2,
-    );
-  }
-}
-
-export class Enemy implements Component, Renderable {
-  private transform: Transform;
-  private animationSprite: AnimationSprite;
-  private movementSpeed = 100;
-
-  constructor(
-    public readonly canvasWindow: CanvasWindow,
-    public readonly soundManager: SoundManager<string>,
+    private readonly soundManager: SoundManager<string>,
+    private readonly targetPosition: () => Vec2,
+    private readonly ghostTexture: ImageBitmap,
+    public readonly type: EnemyType,
     public readonly texture: ImageBitmap,
     public readonly animationSpriteConfig: AnimationSpriteConfig,
-    public readonly player: Player,
-    public readonly position: Vec2,
+    public position: Vec2,
+    public initialHealth = 100,
   ) {
     this.transform = new Transform(position, {
       width: animationSpriteConfig.frameWidth,
@@ -124,27 +34,115 @@ export class Enemy implements Component, Renderable {
       texture,
       animationSpriteConfig,
     );
+
+    this.health = initialHealth;
+
+    switch (type) {
+      case EnemyType.HOMEWORK:
+        this.movementSpeed = 40;
+        break;
+      case EnemyType.CLOWN:
+        this.movementSpeed = 80;
+        break;
+      case EnemyType.EYEBUG:
+        this.movementSpeed = 50;
+        break;
+      case EnemyType.DEMONDOOR:
+        this.movementSpeed = 40;
+        this.health = 200;
+        break;
+    }
   }
 
   public update(dt: number) {
-    const { x, y } = this.player.getCollisionRect();
-    this.transform.move({ x, y }, this.movementSpeed, dt);
+    if (this.isActiveEnemy) {
+      const target = this.targetPosition();
+      this.transform.moveToTarget(target, this.movementSpeed, dt);
+      this.animationSprite.setIsMoving(true);
+      this.animationSprite.update(dt);
 
-    this.animationSprite.update(dt);
+      if (this.hitCooldown > 0) {
+        this.hitCooldown -= dt;
+      }
+    }
+
+    for (const ghost of this.ghosts) {
+      ghost.update(dt);
+    }
+
+    this.ghosts = this.ghosts.filter((ghost) => !ghost.isFinished());
   }
 
   public draw() {
-    this.animationSprite.draw(
+    if (this.isActiveEnemy) {
+      this.animationSprite.draw(
+        this.transform.position,
+        this.transform.direction,
+      );
+    }
+
+    for (const ghost of this.ghosts) {
+      ghost.draw();
+    }
+  }
+
+  public takeDamage(sourcePosition: Vec2, damage = 10) {
+    if (!this.isActiveEnemy || this.hitCooldown > 0) return;
+
+    this.hitCooldown = 0.5;
+
+    const soundName = this.getSoundName();
+    if (soundName) {
+      this.soundManager.play(soundName);
+    }
+
+    this.health -= damage;
+    this.transform.takeDamage(sourcePosition);
+
+    if (this.health <= 0) {
+      this.die();
+    }
+  }
+
+  private getSoundName(): string | undefined {
+    switch (this.type) {
+      case EnemyType.HOMEWORK:
+        return 'paperCrumple';
+      case EnemyType.CLOWN:
+        return 'clownSound';
+      case EnemyType.EYEBUG:
+        return 'bugSquish';
+      case EnemyType.DEMONDOOR:
+        return 'doorClose';
+      default:
+        return undefined;
+    }
+  }
+
+  private die() {
+    this.isActiveEnemy = false;
+
+    const ghost = new GhostEffect(
+      this.canvasWindow,
       this.transform.position,
       this.transform.direction,
+      this.ghostTexture,
     );
+
+    this.ghosts.push(ghost);
   }
 
-  public takeDamage() {
-    this.transform.takeDamage();
-  }
-
-  public getCollisionRect() {
+  public getCollisionRect(): Rectangle {
+    if (!this.isActiveEnemy)
+      return { type: 'rectangle', x: 0, y: 0, width: 0, height: 0, color: '' };
     return this.transform.getCollisionRect();
+  }
+
+  public isAlive(): boolean {
+    return this.isActiveEnemy;
+  }
+
+  public getPosition(): Vec2 {
+    return this.transform.position;
   }
 }
