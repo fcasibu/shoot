@@ -30,6 +30,7 @@ export default tseslint.config(
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/restrict-template-expressions': 'off',
       '@typescript-eslint/no-extraneous-class': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

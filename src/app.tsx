@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { CanvasWindow } from './lib/primitives/window';
 import { InputManager } from './lib/primitives/input';
-import { circleRectOverlap } from './lib/primitives/collision';
-import { createCircle, createRectangle } from './lib/primitives/shape';
+import { TextureManager } from './lib/primitives/texture';
+import { Player } from './game/player';
+import { assert } from './utils';
+import { SoundManager } from './lib/primitives/sound';
 
 const inputManager = new InputManager();
 const canvasWindow = new CanvasWindow(inputManager);
@@ -13,51 +15,54 @@ export function App() {
   useEffect(() => {
     if (!ref.current) return;
 
+    const textures = new TextureManager({
+      mainCharacter: {
+        src: '/textures/kid-male-spritesheet.png',
+        lazy: false,
+      },
+      slash: {
+        src: '/textures/bat-swing-spritesheet.png',
+        lazy: true,
+      },
+    });
+
+    const sounds = new SoundManager({
+      bgm: {
+        src: '/sounds/Goblins_Den_(Regular).wav',
+        lazy: true,
+      },
+      slash: {
+        src: '/sounds/07_human_atk_sword_3.wav',
+        lazy: true,
+      },
+    });
+
     canvasWindow.initWindow(ref.current);
     canvasWindow.setFps(60);
     const width = canvasWindow.getWindowWidth();
+    const height = canvasWindow.getWindowHeight();
 
-    let x = 0;
-    let dir = 1;
+    void textures.loadAll().then(async () => {
+      const mainCharacterTexture = await textures.get('mainCharacter');
+      const slash = await textures.get('slash');
 
-    canvasWindow.run((dt) => {
-      canvasWindow.clearBackground('#FF0000');
+      sounds.play('bgm');
 
-      if (inputManager.isKeyPressed('l')) {
-        dir = -1;
-      }
+      assert(mainCharacterTexture);
+      assert(slash);
 
-      if (inputManager.isKeyPressed('j')) {
-        dir = 1;
-      }
-
-      const mousePosition = inputManager.getMousePosition();
-      const dx = width - x;
-      const rect = createRectangle(x, 0, 1280, 200, '#FFF000');
-      const circle = createCircle(
-        mousePosition.x,
-        mousePosition.y,
-        100,
-        '#FFF000',
+      const player = new Player(
+        canvasWindow,
+        sounds,
+        mainCharacterTexture,
+        { x: width / 2, y: height / 2 },
+        slash,
       );
-
-      if (circleRectOverlap(circle, rect)) {
-        dir = dir === 1 ? -1 : 1;
-      }
-      canvasWindow.drawShape(rect);
-      canvasWindow.drawShape(circle);
-      const text = 'Hello, World!';
-      canvasWindow.drawText(text, 0, 0, 42, '#FFFFFF');
-
-      if (dx < 1280) {
-        const wrappingRect = createRectangle(0, 0, 1280 - dx, 200, '#FFF000');
-
-        if (circleRectOverlap(circle, wrappingRect)) {
-          dir = dir === 1 ? -1 : 1;
-        }
-        canvasWindow.drawShape(wrappingRect);
-      }
-      x = (x + dir * dt + width) % width;
+      canvasWindow.run((dt) => {
+        canvasWindow.clearBackground('#FFF');
+        player.update(dt);
+        player.draw();
+      });
     });
   }, []);
 
