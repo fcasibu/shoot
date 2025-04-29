@@ -5,17 +5,11 @@ import {
   vector2Length,
   vector2Normalize,
   vector2Scale,
+  vector2Sub,
 } from '../lib/primitives/vector2';
 import type { CanvasWindow } from '../lib/primitives/window';
 import type { Rectangle, Vec2 } from '../lib/types';
-
-interface Component {
-  update(dt: number): void;
-}
-
-interface Renderable {
-  draw(position?: Vec2, direction?: number): void;
-}
+import type { Renderable, Component } from './types';
 
 class Transform {
   public direction = 1;
@@ -39,6 +33,17 @@ class Transform {
         this.direction = 1;
       }
     }
+  }
+
+  public takeDamage(enemyPosition: Vec2) {
+    const knockbackDistance = 5.0;
+
+    const directionToEnemy = vector2Sub(enemyPosition, this.position);
+
+    const normalizedDirection = vector2Normalize(directionToEnemy);
+    const knockback = vector2Scale(normalizedDirection, -knockbackDistance);
+
+    this.position = vector2Add(this.position, knockback);
   }
 
   public getCollisionRect(): Rectangle {
@@ -84,7 +89,10 @@ abstract class Weapon implements Component, Renderable {
   }
 
   public abstract draw(position?: Vec2, direction?: number): void;
-  public abstract getAttackArea(position: Vec2): Rectangle | null;
+  public abstract getAttackArea(
+    position: Vec2,
+    direction: number,
+  ): Rectangle | null;
 
   public getDamage() {
     return this.weaponConfig.damage;
@@ -156,9 +164,11 @@ class Bat extends Weapon {
       direction * (baseOffsetX + slashOffsetX) +
       (shouldFlip ? -this.characterSize.width / 2 : 0);
 
+    const yOffset = baseOffsetY + slashOffsetY;
+
     const effectPosition: Vec2 = vector2Add(position, {
       x: xOffset,
-      y: baseOffsetY + slashOffsetY,
+      y: yOffset,
     });
 
     this.canvasWindow.drawTextureRegion(
@@ -169,14 +179,38 @@ class Bat extends Weapon {
     );
   }
 
-  public override getAttackArea(position: Vec2): Rectangle | null {
+  public override getAttackArea(
+    position: Vec2,
+    direction: number,
+  ): Rectangle | null {
     if (!this.isAttacking()) return null;
 
+    const frameWidth = this.weaponConfig.frameWidth;
+    const frameHeight = this.weaponConfig.frameHeight;
+
+    const baseOffsetX = this.characterSize.width / 2;
+    const slashOffsetX = frameWidth / 2;
+    const baseOffsetY = this.characterSize.height / 2;
+    const slashOffsetY = -10;
+
+    const shouldFlip = direction === -1;
+
+    const xOffset =
+      direction * (baseOffsetX + slashOffsetX) +
+      (shouldFlip ? -this.characterSize.width / 2 : 0);
+
+    const yOffset = baseOffsetY + slashOffsetY;
+
+    const effectPosition: Vec2 = vector2Add(position, {
+      x: xOffset,
+      y: yOffset,
+    });
+
     return createRectangle(
-      position.x,
-      position.y,
-      this.weaponConfig.frameWidth * this.weaponConfig.frameCount,
-      this.weaponConfig.frameHeight,
+      effectPosition.x,
+      effectPosition.y,
+      frameWidth,
+      frameHeight,
       '',
     );
   }
@@ -269,7 +303,7 @@ export class Player implements Component, Renderable {
   private animationSprite: AnimationSprite;
   private inputController: InputController;
   private movementSpeed = 200;
-  private weapons: Weapon[] = [];
+  public weapons: Weapon[] = [];
 
   constructor(
     public readonly canvasWindow: CanvasWindow,
@@ -344,6 +378,18 @@ export class Player implements Component, Renderable {
     for (const weapon of this.weapons) {
       weapon.draw(this.transform.position, this.transform.direction);
     }
+  }
+
+  public takeDamage(enemyPosition: Vec2) {
+    this.transform.takeDamage(enemyPosition);
+  }
+
+  public getWeaponCollisionRects() {
+    return this.weapons
+      .filter((weapon) => weapon.isAttacking())
+      .map((weapon) =>
+        weapon.getAttackArea(this.transform.position, this.transform.direction),
+      );
   }
 
   public getCollisionRect() {
