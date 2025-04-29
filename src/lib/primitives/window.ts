@@ -1,9 +1,8 @@
 import type { Color, Rectangle, Shape, Vec2 } from '../types';
-import { assert } from '../utils';
+import { assert } from '../../utils';
 import type { InputManager } from './input';
 import { Renderer } from './renderer';
 
-// TODO(fcasibu): canvas resizing
 export class CanvasWindow {
   private state = {
     isRunning: false,
@@ -17,7 +16,7 @@ export class CanvasWindow {
   private context: CanvasRenderingContext2D | null = null;
   private renderer: Renderer | null = null;
 
-  constructor(private readonly inputManager: InputManager) {}
+  constructor(public readonly inputManager: InputManager) {}
 
   public initWindow(canvas: HTMLCanvasElement) {
     if (this.context) {
@@ -75,10 +74,11 @@ export class CanvasWindow {
     this.renderer.drawTexture(texture, x, y);
   }
 
-  public drawTextureRec(
+  public drawTextureRegion(
     texture: ImageBitmap | undefined,
     source: Rectangle,
     position: Vec2,
+    flipX: boolean,
     scale = 1,
   ) {
     if (!texture) {
@@ -93,7 +93,16 @@ export class CanvasWindow {
       'CanvasWindow renderer is not initialized. Call initWindow first.',
     );
 
-    this.renderer.drawTextureRec(texture, source, position, scale);
+    this.renderer.drawTextureRegion(texture, source, position, flipX, scale);
+  }
+
+  public setGlobalAlpha(globalAlpha: number) {
+    assert(
+      this.context,
+      'CanvasWindow renderer is not initialized. Call initWindow first.',
+    );
+
+    this.context.globalAlpha = globalAlpha;
   }
 
   public drawText(
@@ -125,15 +134,16 @@ export class CanvasWindow {
 
   public run(callback: (timeStep: number) => void) {
     this.state.isRunning = true;
-    this.state.lastUpdate = performance.now();
-    const targetFrameTime = 1000 / this.state.fps;
+    this.state.lastUpdate = performance.now() / 1000;
+    const targetFrameTime = 1 / this.state.fps;
     const maxUpdates = 5;
 
     assert(targetFrameTime > 0, 'Target frame time must be positive');
 
-    const loop = (timestamp: number) => {
+    const loop = (timestampMs: number) => {
       if (!this.state.isRunning) return;
 
+      const timestamp = timestampMs / 1000;
       const dt = timestamp - this.state.lastUpdate;
       this.state.frameTime += dt;
       this.state.lastUpdate = timestamp;
@@ -150,6 +160,10 @@ export class CanvasWindow {
     };
 
     requestAnimationFrame(loop);
+  }
+
+  public getFPS() {
+    return this.state.fps;
   }
 
   public closeWindow() {

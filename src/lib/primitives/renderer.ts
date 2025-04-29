@@ -31,23 +31,35 @@ export class Renderer {
     this.ctx.drawImage(texture, x, y);
   }
 
-  public drawTextureRec(
+  public drawTextureRegion(
     texture: ImageBitmap,
     source: Rectangle,
     position: Vec2,
+    flipX: boolean,
     scale = 1,
   ) {
+    this.ctx.save();
+
+    this.ctx.translate(position.x, position.y);
+
+    if (flipX) {
+      this.ctx.scale(-1, 1);
+      this.ctx.translate(-source.width * scale, 0);
+    }
+
     this.ctx.drawImage(
       texture,
       source.x,
       source.y,
       source.width,
       source.height,
-      position.x,
-      position.y,
+      0,
+      0,
       source.width * scale,
       source.height * scale,
     );
+
+    this.ctx.restore();
   }
 
   public drawText(

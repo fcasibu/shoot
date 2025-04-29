@@ -1,5 +1,5 @@
 import { Howl } from 'howler';
-import { assert } from '../utils';
+import { assert } from '../../utils';
 
 export class SoundManager<Name extends string> {
   private entries = new Map<Name, Howl | (() => Howl)>();
