@@ -1,4 +1,4 @@
-import type { Circle, Color, Shape, Rectangle } from '../types';
+import type { Circle, Color, Shape, Rectangle, Vec2 } from '../types';
 
 export class Renderer {
   constructor(
@@ -25,6 +25,29 @@ export class Renderer {
         console.error('Unknown shape type:', shape);
         break;
     }
+  }
+
+  public drawTexture(texture: ImageBitmap, x: number, y: number) {
+    this.ctx.drawImage(texture, x, y);
+  }
+
+  public drawTextureRec(
+    texture: ImageBitmap,
+    source: Rectangle,
+    position: Vec2,
+    scale = 1,
+  ) {
+    this.ctx.drawImage(
+      texture,
+      source.x,
+      source.y,
+      source.width,
+      source.height,
+      position.x,
+      position.y,
+      source.width * scale,
+      source.height * scale,
+    );
   }
 
   public drawText(

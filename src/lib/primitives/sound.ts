@@ -7,7 +7,7 @@ export class SoundManager<Name extends string> {
   constructor(
     public readonly config: Record<Name, { src: string; lazy: boolean }>,
   ) {
-    Howler.volume(0.2);
+    Howler.volume(0.5);
 
     for (const [name, { src, lazy }] of Object.entries(config) as [
       Name,

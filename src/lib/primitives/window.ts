@@ -1,4 +1,4 @@
-import type { Color, Shape } from '../types';
+import type { Color, Rectangle, Shape, Vec2 } from '../types';
 import { assert } from '../utils';
 import type { InputManager } from './input';
 import { Renderer } from './renderer';
@@ -60,6 +60,40 @@ export class CanvasWindow {
       'CanvasWindow renderer is not initialized. Call initWindow first.',
     );
     this.renderer.drawShape(shape);
+  }
+
+  public drawTexture(texture: ImageBitmap | undefined, x: number, y: number) {
+    if (!texture) {
+      console.warn(`Tried to draw undefined texture at X:${x}, Y:${y}`);
+      return;
+    }
+
+    assert(
+      this.renderer,
+      'CanvasWindow renderer is not initialized. Call initWindow first.',
+    );
+    this.renderer.drawTexture(texture, x, y);
+  }
+
+  public drawTextureRec(
+    texture: ImageBitmap | undefined,
+    source: Rectangle,
+    position: Vec2,
+    scale = 1,
+  ) {
+    if (!texture) {
+      console.warn(
+        `Tried to draw undefined texture at X:${position.x}, Y:${position.y}`,
+      );
+      return;
+    }
+
+    assert(
+      this.renderer,
+      'CanvasWindow renderer is not initialized. Call initWindow first.',
+    );
+
+    this.renderer.drawTextureRec(texture, source, position, scale);
   }
 
   public drawText(
