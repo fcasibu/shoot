@@ -4,9 +4,8 @@ import { InputManager } from './lib/primitives/input';
 import { TextureManager } from './lib/primitives/texture';
 import { SoundManager } from './lib/primitives/sound';
 import { Game } from './game/game-manager';
-
-const inputManager = new InputManager();
-const canvasWindow = new CanvasWindow(inputManager);
+import { Renderer } from './lib/primitives/renderer';
+import { Camera2D } from './lib/primitives/camera';
 
 export function App() {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -14,6 +13,11 @@ export function App() {
 
   useEffect(() => {
     if (!ref.current) return;
+
+    const inputManager = new InputManager();
+    const canvasWindow = new CanvasWindow(ref.current, inputManager);
+    const renderer = new Renderer(canvasWindow.getContext());
+    const camera = new Camera2D(canvasWindow.getContext());
 
     const textures = new TextureManager({
       mainCharacter: {
@@ -101,7 +105,6 @@ export function App() {
       },
     });
 
-    canvasWindow.initWindow(ref.current);
     canvasWindow.setFps(60);
 
     void textures.loadAll().then(async () => {
@@ -115,7 +118,7 @@ export function App() {
       const explosionTexture = await textures.get('explosion');
       const ghostTexture = await textures.get('ghost');
 
-      const game = new Game(canvasWindow, sounds, {
+      const game = new Game(canvasWindow, renderer, camera, sounds, {
         mainCharacterTexture,
         homeworkTexture,
         clownTexture,
@@ -139,7 +142,7 @@ export function App() {
 
   return (
     <div>
-      <canvas ref={ref} width={3000} height={720}></canvas>
+      <canvas ref={ref} width={1280} height={720}></canvas>
     </div>
   );
 }

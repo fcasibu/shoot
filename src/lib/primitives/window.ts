@@ -1,43 +1,35 @@
-import type { Color, Rectangle, Shape, Vec2 } from '../types';
 import { assert } from '../../utils';
 import type { InputManager } from './input';
-import { Renderer } from './renderer';
-import { Camera2D } from './camera';
+
+const DEFAULT_STATE = {
+  isRunning: false,
+  frameTime: 0.0,
+  lastUpdate: 0,
+  fps: 30,
+  width: 0,
+  height: 0,
+};
 
 export class CanvasWindow {
-  private state = {
-    isRunning: false,
-    frameTime: 0.0,
-    lastUpdate: 0,
-    fps: 30,
-    width: 0,
-    height: 0,
-  };
+  private state = DEFAULT_STATE;
 
-  private context: CanvasRenderingContext2D | null = null;
-  private renderer: Renderer | null = null;
-  private camera: Camera2D | null = null;
+  private context: CanvasRenderingContext2D;
 
-  constructor(public readonly inputManager: InputManager) {}
-
-  public initWindow(canvas: HTMLCanvasElement) {
-    if (this.context) {
-      return;
-    }
-
+  constructor(
+    public readonly canvas: HTMLCanvasElement,
+    public readonly inputManager: InputManager,
+  ) {
     this.state.width = canvas.width;
     this.state.height = canvas.height;
     const ctx = canvas.getContext('2d');
     assert(ctx, 'Failed to get 2D rendering context');
 
     this.context = ctx;
-    this.renderer = new Renderer(
-      this.context,
-      this.state.width,
-      this.state.height,
-    );
-    this.camera = new Camera2D(canvas.width, canvas.height, ctx);
     this.inputManager.registerListeners(canvas);
+  }
+
+  public getContext() {
+    return this.context;
   }
 
   public getWindowWidth() {
@@ -48,103 +40,14 @@ export class CanvasWindow {
     return this.state.height;
   }
 
-  public clearBackground(color: Color) {
-    assert(
-      this.renderer,
-      'CanvasWindow renderer is not initialized. Call initWindow first.',
-    );
-    this.renderer.clearBackground(color);
-  }
-
-  public drawShape(shape: Shape) {
-    assert(
-      this.renderer,
-      'CanvasWindow renderer is not initialized. Call initWindow first.',
-    );
-    this.renderer.drawShape(shape);
-  }
-
-  public drawTexture(texture: ImageBitmap | undefined, x: number, y: number) {
-    if (!texture) {
-      console.warn(`Tried to draw undefined texture at X:${x}, Y:${y}`);
-      return;
-    }
-
-    assert(
-      this.renderer,
-      'CanvasWindow renderer is not initialized. Call initWindow first.',
-    );
-    this.renderer.drawTexture(texture, x, y);
-  }
-
-  public drawTextureRegion(
-    texture: ImageBitmap | undefined,
-    source: Rectangle,
-    position: Vec2,
-    flipX: boolean,
-    scale = 1,
-  ) {
-    if (!texture) {
-      console.warn(
-        `Tried to draw undefined texture at X:${position.x}, Y:${position.y}`,
-      );
-      return;
-    }
-
-    assert(
-      this.renderer,
-      'CanvasWindow renderer is not initialized. Call initWindow first.',
-    );
-
-    this.renderer.drawTextureRegion(texture, source, position, flipX, scale);
-  }
-
   public setGlobalAlpha(globalAlpha: number) {
-    assert(
-      this.context,
-      'CanvasWindow renderer is not initialized. Call initWindow first.',
-    );
-
     this.context.globalAlpha = globalAlpha;
   }
 
-  public drawText(
-    text: string,
-    x: number,
-    y: number,
-    fontSize: number,
-    color: Color,
-  ) {
-    assert(
-      this.renderer,
-      'CanvasWindow renderer is not initialized. Call initWindow first.',
-    );
-    this.renderer.drawText(text, x, y, fontSize, color);
-  }
-
-  public measureText(text: string, fontSize: number) {
-    assert(
-      this.renderer,
-      'CanvasWindow renderer is not initialized. Call initWindow first.',
-    );
-    return this.renderer.measureText(text, fontSize);
-  }
-
-  public camera2D() {
-    assert(this.camera);
-
-    return {
-      beginMode: this.camera.beginMode.bind(this.camera),
-      endMode: this.camera.endMode.bind(this.camera),
-      setupCamera: this.camera.setupCamera.bind(this.camera),
-      update: this.camera.update.bind(this.camera),
-      getScreenToWorld: this.camera.getScreenToWorld.bind(this.camera),
-      getWorldToScreen: this.camera.getWorldToScreen.bind(this.camera),
-    } as const satisfies Readonly<Partial<Camera2D>>;
-  }
-
   public setFps(fps: number) {
-    assert(fps > 0, 'FPS must be greater than 0');
+    if (fps <= 0) {
+      throw new Error('FPS must be greater than 0');
+    }
     this.state.fps = fps;
   }
 
@@ -185,8 +88,6 @@ export class CanvasWindow {
   public closeWindow() {
     this.state.isRunning = false;
     this.inputManager.unregisterListeners();
-    this.renderer = null;
-    this.context = null;
-    this.camera = null;
+    this.state = DEFAULT_STATE;
   }
 }

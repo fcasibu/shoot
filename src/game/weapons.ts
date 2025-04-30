@@ -1,3 +1,4 @@
+import type { Renderer } from '../lib/primitives/renderer';
 import { createRectangle } from '../lib/primitives/shape';
 import type { SoundManager } from '../lib/primitives/sound';
 import { vector2Add } from '../lib/primitives/vector2';
@@ -52,8 +53,9 @@ export class Bat extends Weapon {
   private animationProgress = 0;
 
   constructor(
-    private readonly canvasWindow: CanvasWindow,
-    private readonly soundManager: SoundManager<string>,
+    public readonly canvasWindow: CanvasWindow,
+    private readonly renderer: Renderer,
+    private readonly soundManager: SoundManager,
     private readonly characterSize: Size,
     public override readonly weaponConfig: WeaponConfig,
   ) {
@@ -110,7 +112,7 @@ export class Bat extends Weapon {
       y: yOffset,
     });
 
-    this.canvasWindow.drawTextureRegion(
+    this.renderer.drawTextureRegion(
       this.weaponConfig.weaponTexture,
       source,
       effectPosition,

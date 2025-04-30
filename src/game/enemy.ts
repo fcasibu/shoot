@@ -1,3 +1,4 @@
+import type { Renderer } from '../lib/primitives/renderer';
 import type { SoundManager } from '../lib/primitives/sound';
 import type { CanvasWindow } from '../lib/primitives/window';
 import type { Rectangle, Vec2 } from '../lib/types';
@@ -15,7 +16,8 @@ export class Enemy implements Entity {
 
   constructor(
     private readonly canvasWindow: CanvasWindow,
-    private readonly soundManager: SoundManager<string>,
+    private readonly renderer: Renderer,
+    private readonly soundManager: SoundManager,
     private readonly targetPosition: () => Vec2,
     private readonly ghostTexture: ImageBitmap,
     public readonly type: EnemyType,
@@ -31,6 +33,7 @@ export class Enemy implements Entity {
 
     this.animationSprite = new AnimationSprite(
       canvasWindow,
+      renderer,
       texture,
       animationSpriteConfig,
     );
@@ -77,6 +80,7 @@ export class Enemy implements Entity {
       this.animationSprite.draw(
         this.transform.position,
         this.transform.direction,
+        this.hitCooldown > 0,
       );
     }
 
@@ -96,7 +100,10 @@ export class Enemy implements Entity {
     }
 
     this.health -= damage;
-    this.transform.takeDamage(sourcePosition);
+    this.transform.takeDamage(
+      sourcePosition,
+      this.animationSpriteConfig.frameWidth / 2,
+    );
 
     if (this.health <= 0) {
       this.die();
@@ -123,6 +130,7 @@ export class Enemy implements Entity {
 
     const ghost = new GhostEffect(
       this.canvasWindow,
+      this.renderer,
       this.transform.position,
       this.transform.direction,
       this.ghostTexture,

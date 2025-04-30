@@ -1,4 +1,6 @@
+import type { Camera2D } from '../lib/primitives/camera';
 import { rectsOverlap } from '../lib/primitives/collision';
+import type { Renderer } from '../lib/primitives/renderer';
 import type { SoundManager } from '../lib/primitives/sound';
 import type { CanvasWindow } from '../lib/primitives/window';
 import type { Vec2 } from '../lib/types';
@@ -19,7 +21,9 @@ export class Game {
 
   constructor(
     private readonly canvasWindow: CanvasWindow,
-    private readonly soundManager: SoundManager<string>,
+    private readonly renderer: Renderer,
+    private readonly camera: Camera2D,
+    private readonly soundManager: SoundManager,
     private readonly textures: {
       mainCharacterTexture: ImageBitmap;
       homeworkTexture: ImageBitmap;
@@ -37,6 +41,7 @@ export class Game {
 
     this.player = new Player(
       canvasWindow,
+      renderer,
       soundManager,
       textures.mainCharacterTexture,
       {
@@ -48,7 +53,7 @@ export class Game {
       textures.explosionTexture,
     );
 
-    this.canvasWindow.camera2D().setupCamera(this.player.getPosition());
+    this.camera.setupCamera(this.player.getPosition());
 
     this.spawnEnemy(EnemyType.HOMEWORK);
     this.spawnEnemy(EnemyType.CLOWN);
@@ -91,6 +96,7 @@ export class Game {
     this.enemies.push(
       new Enemy(
         this.canvasWindow,
+        this.renderer,
         this.soundManager,
         () => this.player.getPosition(),
         this.textures.ghostTexture,
@@ -110,30 +116,27 @@ export class Game {
         this.soundManager.play('playerDeath');
       }
 
-      this.canvasWindow.clearBackground('#000000');
-      this.canvasWindow.drawText(
+      this.renderer.clearBackground('#000000');
+      this.renderer.drawText(
         'GAME OVER',
-        this.width / 2 -
-          this.canvasWindow.measureText('GAME OVER', 64).width / 2,
+        this.width / 2 - this.renderer.measureText('GAME OVER', 64).width / 2,
         this.height / 2 - 32,
-        64,
         '#FF0000',
+        64,
       );
-      this.canvasWindow.drawText(
+      this.renderer.drawText(
         `Final Score: ${this.score}`,
         this.width / 2 -
-          this.canvasWindow.measureText(`Final Score: ${this.score}`, 32)
-            .width /
-            2,
+          this.renderer.measureText(`Final Score: ${this.score}`, 32).width / 2,
         this.height / 2 + 32,
-        32,
         '#FFFFFF',
+        32,
       );
       this.canvasWindow.closeWindow();
       return;
     }
 
-    this.canvasWindow.clearBackground('#9AF764');
+    this.renderer.clearBackground('#9AF764');
 
     this.spawnTimer += dt;
     if (this.spawnTimer >= this.spawnInterval) {
@@ -146,7 +149,7 @@ export class Game {
         EnemyType.DEMONDOOR,
       ];
       const randomType = types[Math.floor(Math.random() * types.length)];
-      assert(randomType);
+      assert(randomType, 'randomType should always give us a type');
 
       this.spawnEnemy(randomType);
     }
@@ -180,21 +183,21 @@ export class Game {
       }
     }
 
-    this.canvasWindow.drawText(
+    this.renderer.drawText(
       `Health: ${this.player.getHealth()}`,
       10,
       10,
-      24,
       '#FFFFFF',
+      24,
     );
-    this.canvasWindow.drawText(
+    this.renderer.drawText(
       `Score: ${this.score}`,
       this.width -
-        this.canvasWindow.measureText(`Score: ${this.score}`, 24).width -
+        this.renderer.measureText(`Score: ${this.score}`, 24).width -
         10,
       10,
-      24,
       '#FFFFFF',
+      24,
     );
 
     this.player.update(dt);
@@ -202,17 +205,17 @@ export class Game {
       enemy.update(dt);
     }
 
-    this.canvasWindow.camera2D().update({
+    this.camera.update({
       target: this.player.getPosition(),
     });
 
-    this.canvasWindow.camera2D().beginMode();
+    this.camera.beginMode();
     this.player.draw();
     for (const enemy of this.enemies) {
       enemy.draw();
     }
 
-    this.canvasWindow.camera2D().endMode();
+    this.camera.endMode();
   }
 
   public isGameOver(): boolean {

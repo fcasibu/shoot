@@ -14,6 +14,7 @@ import {
   type Renderable,
   type Size,
 } from './types';
+import type { Renderer } from '../lib/primitives/renderer';
 
 export class Transform {
   public direction = 1;
@@ -118,7 +119,8 @@ export class AnimationSprite implements Component, Renderable {
   private readonly frameDuration: number;
 
   constructor(
-    private readonly canvasWindow: CanvasWindow,
+    public readonly canvasWindow: CanvasWindow,
+    private readonly renderer: Renderer,
     private readonly texture: ImageBitmap,
     private readonly config: AnimationSpriteConfig,
     private readonly scale = 2,
@@ -136,7 +138,7 @@ export class AnimationSprite implements Component, Renderable {
     }
   }
 
-  public draw(position: Vec2, direction: number) {
+  public draw(position: Vec2, direction: number, wasHit = false) {
     const source = createRectangle(
       this.config.frameWidth * this.currentFrame,
       0,
@@ -146,13 +148,16 @@ export class AnimationSprite implements Component, Renderable {
     );
 
     const shouldFlip = direction === 1;
+    console.log(wasHit);
 
-    this.canvasWindow.drawTextureRegion(
+    this.renderer.drawTextureRegion(
       this.texture,
       source,
       position,
       shouldFlip,
       this.scale,
+      wasHit ? 'rgba(255, 0, 0, 0.5)' : '',
+      'source-atop',
     );
   }
 }
@@ -166,11 +171,12 @@ export class GhostEffect implements Component, Renderable {
 
   constructor(
     private readonly canvasWindow: CanvasWindow,
+    public readonly renderer: Renderer,
     private readonly position: Vec2,
     private readonly direction: number,
     public readonly ghostTexture: ImageBitmap,
   ) {
-    this.sprite = new AnimationSprite(canvasWindow, ghostTexture, {
+    this.sprite = new AnimationSprite(canvasWindow, renderer, ghostTexture, {
       frameWidth: 64,
       frameHeight: 64,
       frameCount: 5,

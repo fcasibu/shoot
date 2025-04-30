@@ -21,7 +21,7 @@ export class InputManager {
   private abortController = new AbortController();
 
   public getMousePosition() {
-    return structuredClone(this.mouseState.position);
+    return Object.freeze(this.mouseState.position);
   }
 
   public isKeyPressed(key: string): boolean {

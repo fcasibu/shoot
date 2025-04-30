@@ -6,15 +6,16 @@ export class Camera2D {
   private offset: Vec2;
   private rotation: number;
   private zoom: number;
+  private canvasWidth: number;
+  private canvasHeight: number;
 
-  constructor(
-    private readonly width: number,
-    private readonly height: number,
-    private readonly ctx: CanvasRenderingContext2D,
-  ) {
+  constructor(private readonly ctx: CanvasRenderingContext2D) {
     this.offset = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     this.rotation = 0;
     this.zoom = 1.0;
+
+    this.canvasWidth = ctx.canvas.width;
+    this.canvasHeight = ctx.canvas.height;
   }
 
   public setupCamera(playerPosition: Vec2) {
@@ -25,8 +26,8 @@ export class Camera2D {
         rotation: this.rotation,
         offset: this.offset,
       },
-      this.width,
-      this.height,
+      this.canvasWidth,
+      this.canvasHeight,
     );
   }
 
@@ -44,8 +45,8 @@ export class Camera2D {
               rotation: this.rotation,
               offset: this.offset,
             },
-            this.width,
-            this.height,
+            this.canvasWidth,
+            this.canvasHeight,
           );
           break;
         }
@@ -58,6 +59,10 @@ export class Camera2D {
           break;
         }
         case 'zoom': {
+          if (this.zoom <= 0 || this.zoom > 1) {
+            throw new Error('Zoom must be within the range of 0-1');
+          }
+
           this.zoom = value as number;
           break;
         }
@@ -118,6 +123,8 @@ export class Camera2D {
     width: number,
     height: number,
   ): Vec2 {
+    assert(camera.zoom !== 0);
+
     const halfWidth = camera.offset.x / camera.zoom;
     const halfHeight = camera.offset.y / camera.zoom;
 

@@ -10,6 +10,7 @@ import type {
 } from './types';
 import { Bat } from './weapons';
 import { createRectangle } from '../lib/primitives/shape';
+import type { Renderer } from '../lib/primitives/renderer';
 
 class AnimationSprite implements Component, Renderable {
   private currentFrame = 0;
@@ -19,7 +20,8 @@ class AnimationSprite implements Component, Renderable {
   private readonly frameDuration: number;
 
   constructor(
-    private readonly canvasWindow: CanvasWindow,
+    public readonly canvasWindow: CanvasWindow,
+    private readonly renderer: Renderer,
     private readonly texture: ImageBitmap,
     private readonly config: AnimationSpriteConfig,
     private readonly scale = 2,
@@ -50,7 +52,7 @@ class AnimationSprite implements Component, Renderable {
 
     const shouldFlip = direction === -1;
 
-    this.canvasWindow.drawTextureRegion(
+    this.renderer.drawTextureRegion(
       this.texture,
       source,
       position,
@@ -75,7 +77,8 @@ export class Player implements Entity {
 
   constructor(
     private readonly canvasWindow: CanvasWindow,
-    private readonly soundManager: SoundManager<string>,
+    public readonly renderer: Renderer,
+    private readonly soundManager: SoundManager,
     public readonly texture: ImageBitmap,
     public position: Vec2,
     public readonly batSlashTexture: ImageBitmap,
@@ -97,6 +100,7 @@ export class Player implements Entity {
 
     this.animationSprite = new AnimationSprite(
       canvasWindow,
+      renderer,
       texture,
       animationSpriteConfig,
     );
@@ -114,6 +118,7 @@ export class Player implements Entity {
 
     const batWeapon = new Bat(
       canvasWindow,
+      renderer,
       soundManager,
       {
         width: animationSpriteConfig.frameWidth,

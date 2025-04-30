@@ -1,18 +1,18 @@
 import { Howl } from 'howler';
 import { assert } from '../../utils';
 
-export class SoundManager<Name extends string> {
-  private entries = new Map<Name, Howl | (() => Howl)>();
+interface SoundConfigEntry {
+  src: string;
+  lazy: boolean;
+}
 
-  constructor(
-    public readonly config: Record<Name, { src: string; lazy: boolean }>,
-  ) {
+export class SoundManager {
+  private entries = new Map<string, Howl | (() => Howl)>();
+
+  constructor(public readonly config: Record<string, SoundConfigEntry>) {
     Howler.volume(0.5);
 
-    for (const [name, { src, lazy }] of Object.entries(config) as [
-      Name,
-      { src: string; lazy: boolean },
-    ][]) {
+    for (const [name, { src, lazy }] of Object.entries(config)) {
       this.entries.set(
         name,
         lazy ? () => new Howl({ src: [src] }) : new Howl({ src: [src] }),
@@ -20,28 +20,28 @@ export class SoundManager<Name extends string> {
     }
   }
 
-  public play(name: Name) {
-    this.getAudio(name)?.play();
+  public play(name: string) {
+    this.getAudio(name).play();
   }
 
-  public pause(name: Name) {
-    this.getAudio(name)?.pause();
+  public pause(name: string) {
+    this.getAudio(name).pause();
   }
 
-  public stop(name: Name) {
-    this.getAudio(name)?.stop();
+  public stop(name: string) {
+    this.getAudio(name).stop();
   }
 
-  public setVolume(name: Name, volume: number) {
+  public setVolume(name: string, volume: number) {
     assert(
       volume >= 0 && volume <= 1,
       'Volume must be within the range of 0-1',
     );
-    this.getAudio(name)?.volume(volume);
+    this.getAudio(name).volume(volume);
   }
 
-  public setLoop(name: Name, loop: boolean) {
-    this.getAudio(name)?.loop(loop);
+  public setLoop(name: string, loop: boolean) {
+    this.getAudio(name).loop(loop);
   }
 
   public setGlobalVolume(volume: number) {
@@ -52,10 +52,21 @@ export class SoundManager<Name extends string> {
     Howler.volume(volume);
   }
 
-  private getAudio(name: Name): Howl | undefined {
-    const entry = this.entries.get(name);
-    if (!entry) return undefined;
+  public unloadAll() {
+    for (const [, value] of this.entries) {
+      if (value instanceof Howl) {
+        value.unload();
+      }
+    }
 
+    this.entries.clear();
+  }
+
+  private getAudio(name: string): Howl {
+    const entry = this.entries.get(name);
+    if (!entry) {
+      throw new Error(`Failed to load audio with name: ${name}`);
+    }
     if (entry instanceof Howl) return entry;
 
     const resolved = entry();

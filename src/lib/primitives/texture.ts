@@ -1,26 +1,42 @@
-export class TextureManager<Name extends string> {
-  private entries = new Map<Name, ImageBitmap | (() => Promise<ImageBitmap>)>();
+interface TextureConfiigEntry {
+  src: string;
+  lazy: boolean;
+}
 
-  constructor(
-    public readonly config: Record<Name, { src: string; lazy: boolean }>,
-  ) {}
+export class TextureManager {
+  private entries = new Map<
+    string,
+    ImageBitmap | (() => Promise<ImageBitmap>)
+  >();
+
+  constructor(public readonly config: Record<string, TextureConfiigEntry>) {}
 
   public async loadAll() {
-    const promises = Object.entries<{ src: string; lazy: boolean }>(
-      this.config,
-    ).map(async ([name, { src, lazy }]) => {
-      const n = name as Name;
-      if (!lazy) {
-        const bitmap = await this.loadBitmap(src);
-        this.entries.set(n, bitmap);
-      } else {
-        this.entries.set(n, () => this.loadBitmap(src));
-      }
-    });
+    const promises = Object.entries<TextureConfiigEntry>(this.config).map(
+      async ([name, { src, lazy }]) => {
+        const n = name;
+        if (!lazy) {
+          const bitmap = await this.loadBitmap(src);
+          this.entries.set(n, bitmap);
+        } else {
+          this.entries.set(n, () => this.loadBitmap(src));
+        }
+      },
+    );
     await Promise.all(promises);
   }
 
-  public async get(name: Name): Promise<ImageBitmap> {
+  public unloadAll() {
+    for (const [, value] of this.entries) {
+      if (value instanceof ImageBitmap) {
+        value.close();
+      }
+    }
+
+    this.entries.clear();
+  }
+
+  public async get(name: string): Promise<ImageBitmap> {
     const entry = this.entries.get(name);
     if (!entry) {
       throw new Error(`Failed to load image with name: ${name}`);

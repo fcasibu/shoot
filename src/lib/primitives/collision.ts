@@ -1,6 +1,9 @@
+import { assert } from '../../utils';
 import type { Vec2, Rectangle, Circle } from '../types';
 
 export function rectsOverlap(a: Rectangle, b: Rectangle) {
+  assert(a.width >= 0 && a.height >= 0 && b.width >= 0 && b.height >= 0);
+
   return (
     a.x < b.x + b.width &&
     a.x + a.width > b.x &&
@@ -10,12 +13,16 @@ export function rectsOverlap(a: Rectangle, b: Rectangle) {
 }
 
 export function pointInRect(p: Vec2, r: Rectangle) {
+  assert(r.width >= 0 && r.height >= 0);
+
   return (
     p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height
   );
 }
 
 export function circlesOverlap(a: Circle, b: Circle) {
+  assert(a.radius >= 0 && b.radius >= 0);
+
   const dx = a.x - b.x;
   const dy = a.y - b.y;
   const distSq = dx * dx + dy * dy;
@@ -24,6 +31,8 @@ export function circlesOverlap(a: Circle, b: Circle) {
 }
 
 export function pointInCircle(p: Vec2, c: Circle) {
+  assert(c.radius >= 0);
+
   const dx = p.x - c.x;
   const dy = p.y - c.y;
   const distSq = dx * dx + dy * dy;
@@ -31,6 +40,8 @@ export function pointInCircle(p: Vec2, c: Circle) {
 }
 
 export function circleRectOverlap(circle: Circle, rect: Rectangle) {
+  assert(circle.radius >= 0 && rect.width >= 0 && rect.height >= 0);
+
   const closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.width));
   const closestY = Math.max(rect.y, Math.min(circle.y, rect.y + rect.height));
   const dx = circle.x - closestX;
