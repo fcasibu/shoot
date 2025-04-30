@@ -58,7 +58,6 @@ export class Enemy implements Entity {
     if (this.isActiveEnemy) {
       const target = this.targetPosition();
       this.transform.moveToTarget(target, this.movementSpeed, dt);
-      this.animationSprite.setIsMoving(true);
       this.animationSprite.update(dt);
 
       if (this.hitCooldown > 0) {

@@ -39,11 +39,16 @@ export class Game {
       canvasWindow,
       soundManager,
       textures.mainCharacterTexture,
-      { x: this.width / 2, y: this.height / 2 },
+      {
+        x: this.width / 2,
+        y: this.height / 2,
+      },
       textures.slashTexture,
       textures.firecrackerTexture,
       textures.explosionTexture,
     );
+
+    this.canvasWindow.camera2D().setupCamera(this.player.getPosition());
 
     this.spawnEnemy(EnemyType.HOMEWORK);
     this.spawnEnemy(EnemyType.CLOWN);
@@ -197,10 +202,17 @@ export class Game {
       enemy.update(dt);
     }
 
+    this.canvasWindow.camera2D().update({
+      target: this.player.getPosition(),
+    });
+
+    this.canvasWindow.camera2D().beginMode();
     this.player.draw();
     for (const enemy of this.enemies) {
       enemy.draw();
     }
+
+    this.canvasWindow.camera2D().endMode();
   }
 
   public isGameOver(): boolean {

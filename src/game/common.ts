@@ -63,59 +63,6 @@ export class Transform {
   }
 }
 
-export class AnimationSprite implements Component, Renderable {
-  private currentFrame = 0;
-  private frameTime = 0;
-  private isMoving = false;
-  private readonly animationFPS: number;
-  private readonly frameDuration: number;
-
-  constructor(
-    private readonly canvasWindow: CanvasWindow,
-    private readonly texture: ImageBitmap,
-    private readonly config: AnimationSpriteConfig,
-    private readonly scale = 2,
-  ) {
-    this.animationFPS = config.animationFPS ?? 10;
-    this.frameDuration = 1 / this.animationFPS;
-  }
-
-  public update(dt: number) {
-    this.frameTime += dt;
-
-    if (this.frameTime >= this.frameDuration) {
-      this.currentFrame =
-        (this.currentFrame + 1) % (this.config.frameCount / 2);
-      this.frameTime = 0;
-    }
-  }
-
-  public draw(position: Vec2, direction: number) {
-    const animationFrame = this.isMoving ? this.config.frameCount / 2 : 0;
-    const source = createRectangle(
-      this.config.frameWidth * (this.currentFrame + animationFrame),
-      0,
-      this.config.frameWidth,
-      this.config.frameHeight,
-      '',
-    );
-
-    const shouldFlip = direction === -1;
-
-    this.canvasWindow.drawTextureRegion(
-      this.texture,
-      source,
-      position,
-      shouldFlip,
-      this.scale,
-    );
-  }
-
-  public setIsMoving(isMoving: boolean) {
-    this.isMoving = isMoving;
-  }
-}
-
 export class InputController implements Component {
   private moveDirection: Vec2 = { x: 0, y: 0 };
   private actionTriggered = false;
@@ -164,6 +111,52 @@ export class InputController implements Component {
   }
 }
 
+export class AnimationSprite implements Component, Renderable {
+  private currentFrame = 0;
+  private frameTime = 0;
+  private readonly animationFPS: number;
+  private readonly frameDuration: number;
+
+  constructor(
+    private readonly canvasWindow: CanvasWindow,
+    private readonly texture: ImageBitmap,
+    private readonly config: AnimationSpriteConfig,
+    private readonly scale = 2,
+  ) {
+    this.animationFPS = config.animationFPS ?? 10;
+    this.frameDuration = 1 / this.animationFPS;
+  }
+
+  public update(dt: number) {
+    this.frameTime += dt;
+
+    if (this.frameTime >= this.frameDuration) {
+      this.currentFrame = (this.currentFrame + 1) % this.config.frameCount;
+      this.frameTime = 0;
+    }
+  }
+
+  public draw(position: Vec2, direction: number) {
+    const source = createRectangle(
+      this.config.frameWidth * this.currentFrame,
+      0,
+      this.config.frameWidth,
+      this.config.frameHeight,
+      '',
+    );
+
+    const shouldFlip = direction === 1;
+
+    this.canvasWindow.drawTextureRegion(
+      this.texture,
+      source,
+      position,
+      shouldFlip,
+      this.scale,
+    );
+  }
+}
+
 export class GhostEffect implements Component, Renderable {
   private readonly visualDuration = 2.0;
   private readonly fadeOutTime = 1.0;
@@ -180,7 +173,7 @@ export class GhostEffect implements Component, Renderable {
     this.sprite = new AnimationSprite(canvasWindow, ghostTexture, {
       frameWidth: 64,
       frameHeight: 64,
-      frameCount: 10,
+      frameCount: 5,
     });
     this.isActive = true;
     this.timer = this.visualDuration;

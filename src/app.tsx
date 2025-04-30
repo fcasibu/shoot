@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { CanvasWindow } from './lib/primitives/window';
 import { InputManager } from './lib/primitives/input';
 import { TextureManager } from './lib/primitives/texture';
-import { assert } from './utils';
 import { SoundManager } from './lib/primitives/sound';
 import { Game } from './game/game-manager';
 
@@ -116,16 +115,6 @@ export function App() {
       const explosionTexture = await textures.get('explosion');
       const ghostTexture = await textures.get('ghost');
 
-      assert(mainCharacterTexture);
-      assert(homeworkTexture);
-      assert(clownTexture);
-      assert(eyebugTexture);
-      assert(demondoorTexture);
-      assert(slashTexture);
-      assert(firecrackerTexture);
-      assert(explosionTexture);
-      assert(ghostTexture);
-
       const game = new Game(canvasWindow, sounds, {
         mainCharacterTexture,
         homeworkTexture,
@@ -149,8 +138,8 @@ export function App() {
   }, [gameOver]);
 
   return (
-    <div className="flex justify-center items-center h-full">
-      <canvas ref={ref} width={1280} height={720}></canvas>
+    <div>
+      <canvas ref={ref} width={3000} height={720}></canvas>
     </div>
   );
 }

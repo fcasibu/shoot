@@ -1,9 +1,68 @@
 import type { SoundManager } from '../lib/primitives/sound';
 import type { CanvasWindow } from '../lib/primitives/window';
 import type { Rectangle, Vec2 } from '../lib/types';
-import { AnimationSprite, InputController, Transform } from './common';
-import type { Entity, AnimationSpriteConfig } from './types';
+import { InputController, Transform } from './common';
+import type {
+  Entity,
+  AnimationSpriteConfig,
+  Renderable,
+  Component,
+} from './types';
 import { Bat } from './weapons';
+import { createRectangle } from '../lib/primitives/shape';
+
+class AnimationSprite implements Component, Renderable {
+  private currentFrame = 0;
+  private frameTime = 0;
+  private isMoving = false;
+  private readonly animationFPS: number;
+  private readonly frameDuration: number;
+
+  constructor(
+    private readonly canvasWindow: CanvasWindow,
+    private readonly texture: ImageBitmap,
+    private readonly config: AnimationSpriteConfig,
+    private readonly scale = 2,
+  ) {
+    this.animationFPS = config.animationFPS ?? 10;
+    this.frameDuration = 1 / this.animationFPS;
+  }
+
+  public update(dt: number) {
+    this.frameTime += dt;
+
+    if (this.frameTime >= this.frameDuration) {
+      this.currentFrame =
+        (this.currentFrame + 1) % (this.config.frameCount / 2);
+      this.frameTime = 0;
+    }
+  }
+
+  public draw(position: Vec2, direction: number) {
+    const animationFrame = this.isMoving ? this.config.frameCount / 2 : 0;
+    const source = createRectangle(
+      this.config.frameWidth * (this.currentFrame + animationFrame),
+      0,
+      this.config.frameWidth,
+      this.config.frameHeight,
+      '',
+    );
+
+    const shouldFlip = direction === -1;
+
+    this.canvasWindow.drawTextureRegion(
+      this.texture,
+      source,
+      position,
+      shouldFlip,
+      this.scale,
+    );
+  }
+
+  public setIsMoving(isMoving: boolean) {
+    this.isMoving = isMoving;
+  }
+}
 
 export class Player implements Entity {
   private transform: Transform;

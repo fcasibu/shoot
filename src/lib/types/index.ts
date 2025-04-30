@@ -1,5 +1,12 @@
 export type Color = string;
 
+export interface Camera {
+  target: Vec2;
+  offset: Vec2;
+  rotation: number;
+  zoom: number;
+}
+
 export interface Vec2 {
   x: number;
   y: number;

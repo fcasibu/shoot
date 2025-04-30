@@ -2,6 +2,7 @@ import type { Color, Rectangle, Shape, Vec2 } from '../types';
 import { assert } from '../../utils';
 import type { InputManager } from './input';
 import { Renderer } from './renderer';
+import { Camera2D } from './camera';
 
 export class CanvasWindow {
   private state = {
@@ -15,6 +16,7 @@ export class CanvasWindow {
 
   private context: CanvasRenderingContext2D | null = null;
   private renderer: Renderer | null = null;
+  private camera: Camera2D | null = null;
 
   constructor(public readonly inputManager: InputManager) {}
 
@@ -34,6 +36,7 @@ export class CanvasWindow {
       this.state.width,
       this.state.height,
     );
+    this.camera = new Camera2D(canvas.width, canvas.height, ctx);
     this.inputManager.registerListeners(canvas);
   }
 
@@ -127,6 +130,19 @@ export class CanvasWindow {
     return this.renderer.measureText(text, fontSize);
   }
 
+  public camera2D() {
+    assert(this.camera);
+
+    return {
+      beginMode: this.camera.beginMode.bind(this.camera),
+      endMode: this.camera.endMode.bind(this.camera),
+      setupCamera: this.camera.setupCamera.bind(this.camera),
+      update: this.camera.update.bind(this.camera),
+      getScreenToWorld: this.camera.getScreenToWorld.bind(this.camera),
+      getWorldToScreen: this.camera.getWorldToScreen.bind(this.camera),
+    } as const satisfies Readonly<Partial<Camera2D>>;
+  }
+
   public setFps(fps: number) {
     assert(fps > 0, 'FPS must be greater than 0');
     this.state.fps = fps;
@@ -171,5 +187,6 @@ export class CanvasWindow {
     this.inputManager.unregisterListeners();
     this.renderer = null;
     this.context = null;
+    this.camera = null;
   }
 }

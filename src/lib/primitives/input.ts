@@ -78,7 +78,6 @@ export class InputManager {
   }
 
   private keyDown(event: KeyboardEvent) {
-    console.log(event.key);
     this.keyboardState.pressedKeys.add(event.key);
     if (
       ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(

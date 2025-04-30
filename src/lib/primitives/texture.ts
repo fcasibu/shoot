@@ -20,9 +20,11 @@ export class TextureManager<Name extends string> {
     await Promise.all(promises);
   }
 
-  public async get(name: Name): Promise<ImageBitmap | undefined> {
+  public async get(name: Name): Promise<ImageBitmap> {
     const entry = this.entries.get(name);
-    if (!entry) return undefined;
+    if (!entry) {
+      throw new Error(`Failed to load image with name: ${name}`);
+    }
 
     if (entry instanceof ImageBitmap) return entry;
 
